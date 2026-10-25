@@ -1,0 +1,17 @@
+{
+  "d2618e51-c719-4729-b97c-9f7153b6b666": {
+    "backup_id": "d2618e51-c719-4729-b97c-9f7153b6b666",
+    "backup_name": "Default Backup",
+    "backup_location": "/crafty/backups/bb985a01-5c25-4a54-8589-43811c9dbebd",
+    "excluded_dirs": "",
+    "max_backups": 0,
+    "server_id": "bb985a01-5c25-4a54-8589-43811c9dbebd",
+    "compress": false,
+    "shutdown": false,
+    "before": "",
+    "after": "",
+    "default": true,
+    "enabled": true,
+    "backup_type": "zip_vault"
+  }
+}

@@ -16,8 +16,8 @@ its only runtime dependency. It started from the official JavaScript template.
 ```bash
 npm install
 npm test                                  # node --test, the built-in runner
-node --test test/devices.test.js          # one file
-node --test --test-name-pattern "plug"    # tests whose name matches
+node --test test/hub.test.js              # one file
+node --test --test-name-pattern "player"  # tests whose name matches
 npm run lint                              # ESLint
 npm run format:check                      # Prettier, as the CI runs it
 npm run format                            # Prettier, fix in place
@@ -31,16 +31,22 @@ pushing.
 ## Architecture
 
 ```
-index.js                          SDK wiring only: handlers registered before connect()
-src/devices/index.js              registry of the device blueprints + dispatch helpers
-src/devices/<type>.js             one device type per file (buildDevice, onPoll, onSetValue...)
+index.js                          SDK wiring only (src/app.js does the registering)
+src/app.js                        registers every handler on the SDK, returns the hub
+src/hub.js                        CraftyHub: timer, readings, states, scene events, commands
+src/crafty/client.js              Crafty REST API v2 client, normalization, error kinds
+src/crafty/http.js                the one network function (node:https, self-signed per request)
+src/devices.js                    device blueprint of a server, feature names, states
 src/scenes.js                     scene action handlers (manifest `scene_actions`)
-src/widgets.js                    dashboard widget handlers (manifest `widgets`)
+src/widgets.js                    dashboard widget `crafty_servers` (content, buttons)
+src/texts.js                      every text sent outside the widget, four languages
 src/config.js                     DEFAULT_CONFIG (mirrors the manifest defaults) + normalization
-src/weather.js                    example driver (Open-Meteo)
 gladys-assistant-integration.json manifest: name, config_schema, actions, image...
-docs/en.md, docs/fr.md            user documentation, re-hosted by Gladys (mandatory)
-test/                             node --test, against the SDK's fake Gladys (integration-sdk/testing)
+docs/{en,fr,de,es}.md             user documentation, re-hosted by Gladys (same sections)
+test/                             node --test, against the SDK's fake Gladys and an
+                                  in-memory Crafty (test/helpers/fakeCrafty.js)
+test/fixtures/crafty/             real answers of Crafty 4.11.0 (anonymized)
+test/real/real-crafty.test.js     the integration against a real Crafty (npm run test:real)
 .github/scripts/release.mjs       release helpers (manifest bump, changelog), tested in test/
 ```
 
@@ -70,8 +76,9 @@ test/                             node --test, against the SDK's fake Gladys (in
   `type: "provider"`: 5.1.0). `test/manifest.test.js` ties the manifest to the
   code (defaults, action, scene and widget handlers): change both sides
   together.
-- **User-facing text** is bilingual (English and French): action messages,
-  manifest texts, and `docs/en.md` / `docs/fr.md`, kept in sync.
+- **User-facing text** is in four languages (English, French, German with
+  "du", Spanish with "usted"): action messages, widget, manifest texts, and
+  `docs/{en,fr,de,es}.md`, kept in sync. `test/i18n.test.js` checks them.
 - **Style.** Prettier formats, ESLint catches mistakes. Comments explain why,
   in English. Tests never touch the network.
 
@@ -233,3 +240,22 @@ long, et sur un « Sie »/« Ihr… » de politesse en allemand. Le store exige 
 - Docs `en`, `fr`, `de`, `es` avec les mêmes sections.
 - Chauffe, ouverture, sécurité : ne rien rendre pilotable « comme un thermostat » ou par un assistant
   vocal quand une erreur serait dangereuse (leçon d'OctoPrint).
+
+## Crafty Controller (vérifié sur la 4.11.0, 25/10/2026)
+
+- **API v2**, jeton `Authorization: Bearer` d'une clé d'API (Panneau de configuration → Utilisateurs → Clés API →
+  Obtenir un jeton). Un mauvais jeton : **403 `ACCESS_DENIED`** ; un droit manquant : **400 `NOT_AUTHORIZED`**
+  (pas 403). Une clé sans « Accès complet » ni droits voit une liste de serveurs **vide** (200), pas une erreur.
+- `GET /servers/<id>/backups` renvoie un **objet nu** indexé par `backup_id`, sans l'enveloppe `{status, data}` des
+  autres routes. La sauvegarde exige l'id : `POST /action/backup_server/<backup_id>` (on prend `default: true`).
+- Les actions sont **mises en file** et répondent 200 tout de suite, même si le serveur tourne déjà.
+- Statistiques (`/stats`) enregistrées par Crafty **toutes les 30 s** (`stats_update_frequency_seconds`) : lire plus
+  souvent ne sert à rien. Valeur absente = la chaîne `"False"` ; `players` = **repr Python** d'une liste
+  (`"['Alice', 'Bob']"`), `"0"` ou `"False"` sinon ; 12 noms au plus (ping Minecraft). `started` est en UTC sans
+  fuseau, `created` en heure locale : ne servir de `started` que comme marqueur de redémarrage.
+- **Plantage** : sans la détection de plantage de Crafty (désactivée par défaut), un processus tué donne seulement
+  `running: false`, `crashed: false`. Le journal (`/logs?file=true`, droit Logs) d'un arrêt propre contient
+  « Stopping server » ; celui d'un processus tué s'arrête net : c'est le critère (`hasCleanStop`).
+- Serveur Minecraft de test : `POST /api/v2/servers` avec `create_type: minecraft_java`, `download_jar`, `paper`,
+  `1.21.4`, `mem_max: 1` ; joueurs réels par `mineflayer` en mode `online-mode=false` (une connexion toutes les
+  quelques secondes, sinon « Connection throttled »).

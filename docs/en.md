@@ -1,61 +1,168 @@
-# Demo Devices Template
+# Crafty Controller
 
-This is the user documentation of the integration. Gladys re-hosts this file
-and shows a permanent **Documentation** link to it in the Configuration screen
-(in the user's language, with English as the fallback) — it is when
-configuring that the user needs it most. Keep the short onboarding hints in
-the `section` blocks of the manifest `config_schema`; put the long
-step-by-step (screenshots, troubleshooting…) here.
+Follow and drive your **Minecraft servers** managed by
+[Crafty Controller](https://craftycontrol.com) from Gladys: whether each one
+runs, how many players are on it and who, its CPU and memory, its version.
+Gladys can react when a player joins or leaves, when a server empties or
+fills up, stops unexpectedly or restarts — and start, stop, restart or back
+up a server from a scene or from the dashboard.
 
-## What you get
+The integration talks to the REST API of Crafty 4 on your network, with an
+API token. Nothing to install on the servers. It is not affiliated with
+Crafty Controller nor with Mojang.
 
-Six demo devices show up after installation: a weather station (real data
-from Open-Meteo), a switch, a dimmable light, a smart plug with power
-metering, a motion sensor and a camera.
+Without Crafty, the [Game Servers (GameDig)](https://github.com/guim31/gladys-gamedig)
+integration (`gladys-gamedig`) reads a Minecraft server (and 300 other games)
+like the server list of the game, and
+[Minecraft Server](https://github.com/guim31/gladys-minecraft) reads it
+through RCON.
 
-## Configuration
+> **Tested against a real Crafty Controller 4.11** (a Paper 1.21.4 server,
+> real players connected, a crash and a clean stop), but not yet inside a
+> real Gladys: feedback welcome. If something does not work as described,
+> please say so on the [Gladys forum](https://community.gladysassistant.com)
+> or in the [issues](https://github.com/guim31/gladys-crafty/issues).
 
-1. Open the **Configuration** tab of the integration.
-2. Set the **latitude** and **longitude** the demo weather station should
-   observe (they default to Paris), and pick your temperature unit.
-   The **refresh interval** sets how often the weather station and the
-   plug's power are read: every 5 minutes by default, every minute at most.
-3. Save: the devices appear in the **Discovery** tab, ready to be added.
+## What you need
 
-The **Prefer the local connection** toggle drives the demo plug: it reports
-the channel it actually uses as a badge (local or cloud), with an orange dot
-when it runs degraded (local refused, cloud fallback).
+- Gladys Assistant 5.1.0 or later.
+- Crafty Controller 4 (checked on 4.11), reachable from Gladys: by default
+  `https://<address of Crafty>:8443`.
+- An **API token** of Crafty:
+  1. in Crafty, open **Panel Config → Users**, edit your user (or a user made
+     for Gladys), then the **API Keys** tab;
+  2. create a key: a name (`gladys`), and **Full Access** (or, for a key
+     limited to some rights: _Commands_ to start, stop, restart and back up,
+     _Logs_ to tell a crash from a clean stop);
+  3. click **Get A Token** and copy the long text it shows.
 
-## Actions
+The token acts with the rights of its user: a user who only sees some servers
+gives a token that only sees them.
 
-- **Test the weather provider** — performs a live request to Open-Meteo and
-  shows the current temperature and humidity under the button.
-- **Identify a device** — pick one of your devices in the list and it will
-  signal itself (the demo light "blinks" in the logs).
+## Set up
 
-## Scenes
+1. Install the integration: **Integrations → Install from GitHub**, address
+   `https://github.com/guim31/gladys-crafty`.
+2. In its configuration:
+   - **Crafty address**: the address you open Crafty with, e.g.
+     `https://192.168.1.10:8443`. A bare IP address gets `https://` and the
+     port 8443.
+   - **API token**: the token copied above.
+   - **Accept self-signed certificates**: ticked by default, Crafty serving
+     its HTTPS with its own certificate. Untick it only if yours is a trusted
+     one.
+   - **Allow stop and restart**: off by default. Stopping or restarting a
+     server throws its players out: tick it to allow them from the scenes and
+     the widget.
+   - **Refresh interval**: 30 seconds by default (Crafty measures its servers
+     every 30 seconds itself).
+   - **Language of the names**: of the features (set when a device is added)
+     and of the texts the integration writes.
+3. Click **Test the connection**: it lists the servers Crafty gives.
+4. In **Discovery**, add the servers you want as devices.
 
-The integration adds its own cards to the scene editor (Gladys 5.1 or
-later), under the **Integrations** category:
+## The device of each server
 
-- **Motion detected** (trigger) — starts the scene when a demo motion sensor
-  sees something move. Optionally pick the sensor and what moved (person,
-  animal); left empty, any detection matches. The following actions can
-  read what moved with `{{triggerEvent.data.target}}`.
-- **Identify a device** (action) — makes the chosen device signal itself.
-  It returns whether the device could signal itself, so the following
-  actions can depend on it.
+One device per server of Crafty, named like it, kept when it is renamed:
+
+| Feature            | Value                                                         |
+| ------------------ | ------------------------------------------------------------- |
+| **Running**        | 1 while the server runs in Crafty, 0 when it is stopped       |
+| **Players online** | players connected (0 when the server is stopped)              |
+| **Player slots**   | maximum number of players, once the server has given it       |
+| **Players**        | who is playing, e.g. `Alice, Bob`; "Nobody"; "Server stopped" |
+| **CPU**            | CPU use of the server process, in %                           |
+| **Memory**         | memory used by the server process, in MB                      |
+| **Version**        | e.g. `Paper 1.21.4`, once the server has given it             |
+
+The players features only exist for the servers whose players Crafty counts
+(Minecraft Java and Bedrock). Minecraft gives 12 names at most: beyond, the
+text adds "and N more".
 
 ## Dashboard
 
-Add the **Demo status** widget to a dashboard: it shows the live
-temperature of the weather station and the power of the office plug, the
-connection the plug currently uses (orange when degraded) and the observed
-location. Its **Identify the light** button makes the demo light signal
-itself.
+The **Crafty servers** widget shows a tile per server (players online /
+slots, or its state: stopped, crashed, starting), a list with the state, the
+version and who is playing, and buttons, each one confirmed first:
+
+- **Start** for a stopped server;
+- **Restart** and **Stop**, only if allowed in the configuration;
+- **Backup** when the widget shows one server;
+- **Refresh**.
+
+Every server by default (three at most), or the one chosen in the widget
+settings: one server also shows its CPU and memory.
+
+## Scenes
+
+### Triggers
+
+- **A player joined the Minecraft server** — with the name when Minecraft
+  gives every name. Filters: server, player name.
+- **A player left the Minecraft server** — with the minutes played. Not fired
+  when the server stops.
+- **The Minecraft server is empty** — the last player left, the server still
+  running.
+- **The Minecraft server is full** — every slot is taken.
+- **A server stopped unexpectedly** — a stop asked neither from Gladys nor from
+  Crafty: no clean shutdown in the log of the server (the key needs the
+  _Logs_ right), or Crafty's crash detection.
+- **A server restarted** — running again after a restart (from Gladys or
+  Crafty) or after an unexpected stop (variable "After an unexpected stop").
+
+A stop or a start seen in Crafty is also the **Running** feature of the
+device: a scene can use it directly ("Running" becomes 0).
+
+### Actions
+
+- **Start a Minecraft server** — nothing is sent when it already runs.
+- **Stop a Minecraft server** and **Restart a Minecraft server** — only when
+  allowed in the configuration, else the scene stops with an error.
+- **Back up a Minecraft server** — runs the default backup of the server in
+  Crafty, with its settings (one set to stop the server stops it).
+- **Read a Minecraft server** — reads it now; its state (running, players,
+  CPU, memory, version) goes to the next steps: a message, or "Continue only
+  if" on running.
+
+The four commands give "Command sent" (false when nothing had to be done).
+
+### Scene ideas
+
+- At 23:00 on school days, if the kids' server is still running: send a
+  message, then **Stop a Minecraft server**.
+- **The Minecraft server is empty** → **Back up a Minecraft server**.
+- **A server stopped unexpectedly** → a notification, then **Start a
+  Minecraft server**.
+- **A player joined the Minecraft server** (player "Alice") → "Alice is on
+  {{server}}".
 
 ## Troubleshooting
 
-The integration logs everything it does: check the integration logs from the
-Gladys UI (or `docker logs` on the host) with `LOG_LEVEL=debug` for the full
-detail.
+- **"Crafty unreachable"**: check the address and the port (8443 by default),
+  and that Gladys reaches the machine of Crafty.
+- **"Certificate refused"**: tick "Accept self-signed certificates".
+- **"This address is not the Crafty API"**: usually `http://` on the HTTPS
+  port: use `https://`.
+- **"API token refused by Crafty"**: the key was deleted, or the token copied
+  partly: create a new token with **Get A Token**.
+- **"Permission missing for this token in Crafty"**: give the key (or its
+  user) the right on the server: _Commands_ for the actions.
+- **"Crafty answers, but this token sees no server"**: the user of the key
+  has no server, or the key has no right on them.
+- **No crash detected**: without the _Logs_ right, the integration cannot
+  tell a crash from a clean stop; turn on crash detection in Crafty, or give
+  the key the _Logs_ right.
+- Logs of the integration with more details: `LOG_LEVEL=debug`.
+
+## Limits
+
+- Tested against a real Crafty Controller 4.11, not yet inside a real Gladys.
+- Crafty measures its servers every 30 seconds: a change shows within 30 to
+  60 seconds, a player who stays less can be missed.
+- Minecraft gives 12 player names at most: beyond, the join and leave events
+  have no name.
+- A restart faster than two readings is only seen through its new start
+  time.
+- Other servers of Crafty (Steam, Hytale) get the running state, CPU, memory
+  and the commands, without players.
+- One Crafty per integration.

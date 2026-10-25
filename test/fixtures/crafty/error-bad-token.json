@@ -1,0 +1,5 @@
+{
+  "status": "error",
+  "error": "ACCESS_DENIED",
+  "error_data": "An error occured while authenticating the user"
+}
