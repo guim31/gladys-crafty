@@ -177,4 +177,5 @@ hacer).
   arranque.
 - Los demás servidores de Crafty (Steam, Hytale) tienen el estado en marcha,
   la CPU, la memoria y los comandos, sin jugadores.
-- Un solo Crafty por integración.
+- Un solo Crafty por integración, en su propia dirección: un Crafty detrás de
+  un proxy inverso bajo una subruta (`/crafty`) no está soportado.

@@ -46,6 +46,9 @@ export const HUB_TIMINGS = {
   // A restart asked from Gladys is reported when the server runs again
   // within this time.
   restartWindowMs: 10 * 60_000,
+  // A clean stop not asked from Gladys followed by a start within this time
+  // is a restart from Crafty (its restart takes a few seconds).
+  cleanRestartWindowMs: 2 * 60_000,
 };
 
 // Joins or leaves fired for one reading at most: a server restarting with
@@ -128,6 +131,10 @@ export class CraftyHub {
   }
 
   async reconfigure(config) {
+    // A reading under way belongs to the previous configuration (another
+    // Crafty, another token): let it end before changing anything, then read
+    // afresh.
+    await this.polling?.catch(() => {});
     const previous = this.config;
     this.config = config;
     const sameCrafty =
@@ -363,6 +370,7 @@ export class CraftyHub {
     if (record.error) {
       record.error = null;
       this.resolved(`stats-${record.server.id}`);
+      logger.info(`${record.server.name}: statistics readable again`);
     }
     return this.applyStats(record, stats);
   }
@@ -439,6 +447,9 @@ export class CraftyHub {
   async onStopped(record, stats, now) {
     const name = record.server.name;
     if (now < record.expectStopUntil) {
+      // The stop asked from Gladys: it explains this stop, not the next one
+      // (a crash a minute after a start from Gladys is still a crash).
+      record.expectStopUntil = 0;
       logger.info(`${name} stopped`);
       return;
     }
@@ -458,6 +469,10 @@ export class CraftyHub {
       await this.fire(TRIGGERS.SERVER_CRASHED, record, {});
       return;
     }
+    // A clean stop from Crafty: if the server runs again soon, it was the
+    // Restart button of Crafty (a reading fell between the stop and the start).
+    record.pendingRestart = 'requested';
+    record.pendingRestartUntil = now + this.timings.cleanRestartWindowMs;
     logger.info(`${name} stopped`);
   }
 
@@ -466,6 +481,8 @@ export class CraftyHub {
     const inTime = now <= record.pendingRestartUntil;
     record.pendingRestart = null;
     record.pendingRestartUntil = 0;
+    // A restart asked from Gladys is over: its stop is no longer expected.
+    record.expectStopUntil = 0;
     logger.info(`${record.server.name} started`);
     if (pending && inTime) {
       await this.fire(TRIGGERS.SERVER_RESTARTED, record, { after_crash: pending === 'crash' });
@@ -561,6 +578,11 @@ export class CraftyHub {
   async publishStates(record, { created = false } = {}) {
     const externalId = deviceIds(this.gladys, record.server.id).device;
     if (!created && !this.createdDevices().has(externalId)) {
+      return;
+    }
+    // Statistics unreadable: no state, not even the heartbeat — Gladys then
+    // shows the values as old, which they are.
+    if (record.error) {
       return;
     }
     const states = featureStates(this.gladys, record, this.language)
@@ -681,6 +703,13 @@ export class CraftyHub {
       return { sent: false, message: ACTION_TEXT.alreadyStopped };
     }
     const { id, name } = record.server;
+    // Set before sending (Crafty may act before it answers), restored if the
+    // command fails: a refused stop must not hide a later crash.
+    const before = {
+      expectStopUntil: record.expectStopUntil,
+      pendingRestart: record.pendingRestart,
+      pendingRestartUntil: record.pendingRestartUntil,
+    };
     try {
       let backupId = null;
       if (action === ACTIONS.BACKUP) {
@@ -693,11 +722,13 @@ export class CraftyHub {
         record.expectStopUntil = this.now() + this.timings.expectStopMs;
       }
       if (action === ACTIONS.RESTART) {
-        record.pendingRestart = 'requested';
+        // A restart after a crash stays "after a crash".
+        record.pendingRestart = record.pendingRestart === 'crash' ? 'crash' : 'requested';
         record.pendingRestartUntil = this.now() + this.timings.restartWindowMs;
       }
       await this.client.action(id, action, backupId);
     } catch (err) {
+      Object.assign(record, before);
       if (err instanceof CraftyError) {
         logger.warn(`${action} on ${name} refused: ${err.message}`);
         throw new Error(pick(ERROR_TEXT[err.kind] ?? ERROR_TEXT[ERROR_KINDS.HTTP], language), {
@@ -723,6 +754,9 @@ export class CraftyHub {
       throw new Error(pick(ERROR_TEXT[this.error.kind], language));
     }
     const record = this.recordForCommand(deviceExternalId, language);
+    if (record.error) {
+      throw new Error(pick(ERROR_TEXT[record.error.kind], language));
+    }
     const stats = record.stats ?? { running: false, online: 0, max: 0, cpu: 0, memoryBytes: 0 };
     return {
       running: stats.running,

@@ -61,6 +61,20 @@ test('a stop asked from Gladys is no crash, even without a clean log; a restart 
   assert.deepEqual(w.server.commands, ['stop_server', 'restart_server']);
 });
 
+test('a crash soon after a stop and a start from Gladys is still a crash (seen on a real Crafty)', async (t) => {
+  const w = await world(t, { config: ALLOWED });
+  await w.fake.sceneAction('stop_server', { device: deviceId(w.gladys) });
+  w.server.stop({ clean: true });
+  await w.hub.pollAll();
+  await w.fake.sceneAction('start_server', { device: deviceId(w.gladys) });
+  w.server.play([], { started: '2026-10-25 12:20:25' });
+  await w.hub.pollAll();
+  w.clock.advance(60_000);
+  w.server.stop({ clean: false });
+  await w.hub.pollAll();
+  assert.equal(events(w, TRIGGERS.SERVER_CRASHED).length, 1);
+});
+
 test('backup: the default backup configuration of the server', async (t) => {
   const w = await world(t);
   const ack = await w.fake.sceneAction('backup_server', { device: deviceId(w.gladys) });
@@ -223,4 +237,15 @@ test('widget messages: nothing configured, Crafty unreachable, unknown server', 
   await w.fake.configUpdated({ language: 'en' });
   components = await content(w);
   assert.match(components[0].text, /Enter the address of Crafty/);
+});
+
+test('a refused restart leaves no expectation behind: a crash right after is still one', async (t) => {
+  const w = await world(t, { config: ALLOWED });
+  w.server.forbidden = true;
+  const ack = await w.fake.sceneAction('restart_server', { device: deviceId(w.gladys) });
+  assert.equal(ack.success, false);
+  w.server.forbidden = false;
+  w.server.stop({ clean: false });
+  await w.hub.pollAll();
+  assert.equal(events(w, TRIGGERS.SERVER_CRASHED).length, 1);
 });

@@ -165,4 +165,5 @@ The four commands give "Command sent" (false when nothing had to be done).
   time.
 - Other servers of Crafty (Steam, Hytale) get the running state, CPU, memory
   and the commands, without players.
-- One Crafty per integration.
+- One Crafty per integration, at its own address: a Crafty behind a reverse
+  proxy under a sub-path (`/crafty`) is not supported.

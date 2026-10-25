@@ -46,11 +46,12 @@ export const TEXT = {
   },
   players: { en: 'Players', fr: 'Joueurs', de: 'Spieler', es: 'Jugadores' },
   cpu: { en: 'CPU', fr: 'Processeur', de: 'CPU', es: 'CPU' },
-  memory: { en: 'Memory', fr: 'Mémoire', de: 'Speicher', es: 'Memoria' },
+  memory: { en: 'Memory', fr: 'Mémoire', de: 'Arbeitsspeicher', es: 'Memoria' },
   running: { en: 'Running', fr: 'En marche', de: 'Läuft', es: 'En marcha' },
   stopped: { en: 'Stopped', fr: 'Arrêté', de: 'Gestoppt', es: 'Detenido' },
   crashed: { en: 'Crashed', fr: 'Planté', de: 'Abgestürzt', es: 'Caído' },
   starting: { en: 'Starting…', fr: 'Démarrage…', de: 'Startet…', es: 'Arrancando…' },
+  unknown_state: { en: 'Unknown', fr: 'Inconnu', de: 'Unbekannt', es: 'Desconocido' },
   waiting: { en: 'Waiting…', fr: 'En attente…', de: 'Warte…', es: 'Esperando…' },
   nobody: { en: 'Nobody', fr: 'Personne', de: 'Niemand', es: 'Nadie' },
   start: { en: 'Start', fr: 'Démarrer', de: 'Starten', es: 'Arrancar' },
@@ -79,12 +80,20 @@ const refreshButton = (language) => ({
   action: { key: REFRESH },
 });
 
-const running = (record) => record.stats?.running === true;
+// Statistics unreadable (a permission missing): the last ones are not shown.
+const running = (record) => !record.error && record.stats?.running === true;
 // Stopped after a crash, and not started since.
 const crashed = (record) => !running(record) && record.pendingRestart === 'crash';
 
 /** The state word and style of a server. */
 function stateOf(record, language) {
+  if (record.error) {
+    return {
+      value: t(TEXT.unknown_state, language),
+      icon: 'alert-circle',
+      color: WIDGET_COLORS.WARNING,
+    };
+  }
   if (!record.stats) {
     return { value: t(TEXT.waiting, language), icon: 'clock', color: WIDGET_COLORS.NEUTRAL };
   }
@@ -261,7 +270,7 @@ async function get(hub, { settings, language = 'en' } = {}) {
   return { ttl_seconds: moving ? 20 : 60, components };
 }
 
-async function action(hub, { actionKey, params = {} }) {
+async function action(hub, { actionKey, params = {}, language }) {
   if (actionKey === REFRESH) {
     await hub.pollAll();
     return hub.error ? ERROR_TEXT[hub.error.kind] : ACTION_TEXT.refreshed;
@@ -271,7 +280,11 @@ async function action(hub, { actionKey, params = {} }) {
     throw new Error(`Unknown action ${actionKey}`);
   }
   // The rules (stop allowed?) are checked again here: the content may predate a change.
-  const { message: text } = await hub.command(params.device, VERBS[match[1]]);
+  const { message: text } = await hub.command(
+    params.device,
+    VERBS[match[1]],
+    language ?? hub.language,
+  );
   return text;
 }
 

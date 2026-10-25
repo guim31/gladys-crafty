@@ -73,11 +73,13 @@ Checked on 25 October 2026 against **Crafty Controller 4.11.0**
   clients), stopped; backups; the log after a clean stop and after the Java
   process was killed; the refusals of a bad token and of a token without
   rights;
-- the start, stop, restart and backup commands, sent by the integration;
 - the integration itself in its Docker image, with the constraints of the
   Gladys sandbox (`--cap-drop ALL`, `--security-opt no-new-privileges`,
   `--read-only`, `--memory 256m`, `--pids-limit 256`, bridge network), against
-  that Crafty (`test/real/real-crafty.test.js`, with the SDK's fake Gladys).
+  that Crafty (`test/real/real-crafty.test.js`, with the SDK's fake Gladys):
+  start, backup, restart (reported as a restart), stop from Gladys (no
+  crash), then the Java process killed (reported as an unexpected stop); a
+  wrong token and a strict certificate check refused; 36 MB of memory used.
 
 Not checked: a real Gladys instance (dashboard rendering, scenes), a Bedrock
 server, Crafty's own crash detection, servers of other kinds (Steam, Hytale).

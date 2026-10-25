@@ -220,6 +220,7 @@ test('a plain start after a clean stop is no restart event (the device state say
   const w = await world(t);
   w.server.stop({ clean: true });
   await w.hub.pollAll();
+  w.clock.advance(10 * 60_000);
   w.server.play([], { started: '2026-10-25 12:00:00' });
   await w.hub.pollAll();
   assert.equal(events(w, TRIGGERS.SERVER_RESTARTED).length, 0);
@@ -322,4 +323,58 @@ test('a renamed server keeps its device', async (t) => {
   await w.hub.pollAll();
   assert.equal(w.fake.discoveredDevices[0].name, 'Survival 2');
   assert.equal(w.fake.discoveredDevices[0].external_id, deviceId(w.gladys));
+});
+
+test('a clean stop then a start soon after (the Restart button of Crafty) is a restart', async (t) => {
+  const w = await world(t);
+  w.server.stop({ clean: true });
+  await w.hub.pollAll();
+  w.clock.advance(30_000);
+  w.server.play([], { started: '2026-10-25 12:31:00' });
+  await w.hub.pollAll();
+  assert.deepEqual(events(w, TRIGGERS.SERVER_RESTARTED), [
+    { device: deviceId(w.gladys), server: 'Survival', after_crash: false },
+  ]);
+});
+
+test('unreadable statistics: no state published (not even the heartbeat), the widget says unknown', async (t) => {
+  const w = await world(t);
+  const before = w.fake.states.length;
+  w.server.forbidden = true;
+  w.server.play(['Alice_Test']);
+  await w.hub.pollAll();
+  assert.equal(w.fake.states.length, before);
+  const ack = await w.fake.widgetGet(WIDGET_KEY, { settings: {}, language: 'en' });
+  assert.equal(ack.data.content.components[0].value, 'Unknown');
+  const read = await w.fake.sceneAction('read_server', { device: deviceId(w.gladys) });
+  assert.equal(read.success, false);
+  assert.match(read.error, /Permission missing/);
+  w.server.forbidden = false;
+  await w.hub.pollAll();
+  assert.equal(state(w, 'players_online'), 1);
+});
+
+test('a new token while a reading is under way: the new configuration is read at once', async (t) => {
+  const w = await world(t);
+  let release;
+  const request = w.crafty.request;
+  // Only the first request waits: the reading under way.
+  w.hub.client.request = async (url, options) => {
+    w.hub.client.request = request;
+    await new Promise((resolve) => {
+      release = resolve;
+    });
+    return request(url, options);
+  };
+  const old = w.hub.pollAll();
+  const reconfigured = w.fake.configUpdated({ ...CONFIG, api_token: 'wrong' });
+  await new Promise((resolve) => setImmediate(resolve));
+  release();
+  await old;
+  await reconfigured;
+  // The old reading did not fill the new configuration: the new token is
+  // read at once, and refused.
+  assert.equal(w.fake.connectionStatus.connected, false);
+  assert.equal(w.fake.connectionStatus.message.en, 'API token refused by Crafty');
+  assert.equal(w.hub.records.size, 0);
 });

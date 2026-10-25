@@ -148,7 +148,14 @@ test('the name is the same in every language, the catalog description long enoug
 test('every message table of the code has the four languages', () => {
   // Widget texts shown as tiles or rows are short; the others are messages.
   const longWidgetTexts = new Set(['unknown']);
-  const tileTexts = new Set(['running', 'stopped', 'crashed', 'starting', 'waiting']);
+  const tileTexts = new Set([
+    'running',
+    'stopped',
+    'crashed',
+    'starting',
+    'waiting',
+    'unknown_state',
+  ]);
   const found = [
     ...problems(INIT_FAILED, 'INIT_FAILED', MAX.message),
     ...Object.entries(CONNECTION_TEXT).flatMap(([key, value]) =>

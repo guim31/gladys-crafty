@@ -79,7 +79,7 @@ behalten:
 | **Spielerplätze**   | maximale Spielerzahl, sobald der Server sie geliefert hat      |
 | **Spieler**         | wer spielt, z. B. `Alice, Bob`; „Niemand“; „Server gestoppt“   |
 | **CPU**             | CPU-Auslastung des Serverprozesses, in %                       |
-| **Arbeitsspeicher** | vom Serverprozess belegter Speicher, in MB                     |
+| **Arbeitsspeicher** | vom Serverprozess belegter Arbeitsspeicher, in MB              |
 | **Version**         | z. B. `Paper 1.21.4`, sobald der Server sie geliefert hat      |
 
 Die Spieler-Funktionen gibt es nur für die Server, deren Spieler Crafty zählt
@@ -99,7 +99,7 @@ Zustand, Version und wer spielt, und Schaltflächen, jede zuerst bestätigt:
 
 Standardmäßig alle Server (höchstens drei) oder der in den
 Widget-Einstellungen gewählte: Ein einzelner Server zeigt auch CPU und
-Speicher.
+Arbeitsspeicher.
 
 ## Szenen
 
@@ -133,7 +133,7 @@ Geräts: Eine Szene kann sie direkt nutzen („Läuft“ wird 0).
   Servers in Crafty, mit dessen Einstellungen (ein Backup, das den Server
   stoppt, stoppt ihn).
 - **Einen Minecraft-Server lesen** — liest ihn jetzt; sein Zustand (läuft,
-  Spieler, CPU, Speicher, Version) geht an die nächsten Schritte: eine
+  Spieler, CPU, Arbeitsspeicher, Version) geht an die nächsten Schritte: eine
   Nachricht oder „Nur fortfahren, wenn“ auf läuft.
 
 Die vier Befehle liefern „Befehl gesendet“ (falsch, wenn nichts zu tun war).
@@ -180,5 +180,6 @@ Die vier Befehle liefern „Befehl gesendet“ (falsch, wenn nichts zu tun war).
 - Ein Neustart, schneller als zwei Abfragen, wird nur an seiner neuen
   Startzeit erkannt.
 - Andere Server von Crafty (Steam, Hytale) erhalten den Zustand läuft, CPU,
-  Speicher und die Befehle, ohne Spieler.
-- Ein Crafty pro Integration.
+  Arbeitsspeicher und die Befehle, ohne Spieler.
+- Ein Crafty pro Integration, unter seiner eigenen Adresse: Ein Crafty hinter
+  einem Reverse-Proxy in einem Unterpfad (`/crafty`) wird nicht unterstützt.

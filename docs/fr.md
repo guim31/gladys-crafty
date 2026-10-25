@@ -179,4 +179,5 @@ rien à faire).
   heure de démarrage.
 - Les autres serveurs de Crafty (Steam, Hytale) ont l'état en marche, le
   processeur, la mémoire et les commandes, sans joueurs.
-- Un seul Crafty par intégration.
+- Un seul Crafty par intégration, à sa propre adresse : un Crafty derrière un
+  proxy inverse sous un sous-chemin (`/crafty`) n'est pas pris en charge.
