@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-25
+
 ### Added
 
 - One device per server of Crafty Controller 4: Running, Players online,
@@ -26,4 +28,5 @@ the notes of the version's GitHub Release.
   (the default HTTPS of Crafty), English, French, German and Spanish texts
   and documentation.
 
-[Unreleased]: https://github.com/guim31/gladys-crafty/commits/main
+[Unreleased]: https://github.com/guim31/gladys-crafty/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/guim31/gladys-crafty/releases/tag/v1.0.0
