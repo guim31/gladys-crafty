@@ -1,177 +1,1046 @@
 {
   "manifest_version": 1,
   "type": "device",
-  "name": "Demo Devices Template",
+  "name": "Crafty Controller",
   "description": {
-    "en": "Starter template showing sensors, a switch, a dimmable light and a smart plug.",
-    "fr": "Template de démarrage : capteurs, interrupteur, lampe variable et prise connectée."
+    "en": "Your Minecraft servers in Crafty: running, players, CPU, start, stop, backup from scenes.",
+    "fr": "Vos serveurs Minecraft dans Crafty : état, joueurs, CPU, démarrer, arrêter, sauvegarder.",
+    "de": "Deine Minecraft-Server in Crafty: Status, Spieler, CPU, starten, stoppen, sichern.",
+    "es": "Sus servidores Minecraft en Crafty: estado, jugadores, CPU, arrancar, detener, copia."
   },
   "version": "1.0.0",
-  "docker_image": "ghcr.io/gladysassistant/integration-template-js:1.0.0",
+  "docker_image": "ghcr.io/guim31/gladys-crafty:1.0.0",
   "gladys_version": ">=5.1.0",
-  "cover_image": "https://raw.githubusercontent.com/GladysAssistant/integration-template-js/master/cover.png",
-  "categories": ["lighting", "security", "environment"],
-  "transports": ["local", "cloud"],
+  "cover_image": "https://raw.githubusercontent.com/guim31/gladys-crafty/main/cover.png",
+  "categories": ["leisure", "servers"],
+  "transports": ["local"],
   "config_schema": [
     {
       "key": "intro",
       "type": "section",
-      "label": { "en": "Getting started", "fr": "Pour commencer" },
+      "label": {
+        "en": "Your Crafty Controller",
+        "fr": "Votre Crafty Controller",
+        "de": "Dein Crafty Controller",
+        "es": "Su Crafty Controller"
+      },
       "description": {
-        "en": "The demo weather station reads real data from the free Open-Meteo API: pick the coordinates to observe. No account, no API key.",
-        "fr": "La station météo de démonstration lit de vraies données via l'API gratuite Open-Meteo : choisissez les coordonnées à observer. Pas de compte, pas de clé d'API."
+        "en": "In Crafty, open Panel Config, Users, edit your user, API Keys: create a key with Full Access, then Get A Token. Paste it below with the address of Crafty and click Test the connection.",
+        "fr": "Dans Crafty, ouvrez Panneau de configuration, Utilisateurs, modifiez votre utilisateur, Clés API : créez une clé avec Accès complet, puis Obtenir un jeton. Collez-le ci-dessous avec l'adresse de Crafty et cliquez sur Tester la connexion.",
+        "de": "Öffne in Crafty Panel-Konfiguration, Benutzer, bearbeite deinen Benutzer, API-Schlüssel: Erstelle einen Schlüssel mit Vollzugriff, dann Schlüssel erhalten. Füge es unten mit der Adresse von Crafty ein und klicke auf Verbindung testen.",
+        "es": "En Crafty, abra Configuración del panel, Usuarios, edite su usuario, Claves API: cree una clave con Acceso completo y luego Conseguir un Token. Péguelo abajo con la dirección de Crafty y pulse Probar la conexión."
       },
       "links": [
         {
-          "url": "https://open-meteo.com/en/docs",
-          "label": { "en": "Open-Meteo documentation", "fr": "Documentation Open-Meteo" }
+          "url": "https://github.com/guim31/gladys-crafty/blob/main/docs/en.md",
+          "label": {
+            "en": "Setup guide",
+            "fr": "Guide d'installation",
+            "de": "Einrichtungsanleitung",
+            "es": "Guía de instalación"
+          }
+        },
+        {
+          "url": "https://docs.craftycontrol.com/",
+          "label": {
+            "en": "Crafty documentation",
+            "fr": "Documentation de Crafty",
+            "de": "Crafty-Dokumentation",
+            "es": "Documentación de Crafty"
+          }
         }
       ]
     },
     {
-      "key": "latitude",
-      "type": "number",
-      "label": { "en": "Latitude", "fr": "Latitude" },
-      "description": {
-        "en": "Latitude used for the demo weather sensor.",
-        "fr": "Latitude utilisée par le capteur météo de démonstration."
+      "key": "url",
+      "type": "string",
+      "label": {
+        "en": "Crafty address",
+        "fr": "Adresse de Crafty",
+        "de": "Crafty-Adresse",
+        "es": "Dirección de Crafty"
       },
-      "placeholder": { "en": "e.g. 48.8566", "fr": "ex. 48.8566" },
-      "required": true,
-      "default": 48.8566,
-      "min": -90,
-      "max": 90
+      "description": {
+        "en": "The address you open Crafty with. A bare IP address gets https:// and port 8443.",
+        "fr": "L'adresse avec laquelle vous ouvrez Crafty. Une adresse IP seule reçoit https:// et le port 8443.",
+        "de": "Die Adresse, mit der du Crafty öffnest. Eine reine IP-Adresse erhält https:// und Port 8443.",
+        "es": "La dirección con la que abre Crafty. Una dirección IP sola recibe https:// y el puerto 8443."
+      },
+      "placeholder": {
+        "en": "e.g. https://192.168.1.10:8443",
+        "fr": "ex. https://192.168.1.10:8443",
+        "de": "z. B. https://192.168.1.10:8443",
+        "es": "p. ej. https://192.168.1.10:8443"
+      },
+      "required": false
     },
     {
-      "key": "longitude",
-      "type": "number",
-      "label": { "en": "Longitude", "fr": "Longitude" },
-      "description": {
-        "en": "Longitude used for the demo weather sensor.",
-        "fr": "Longitude utilisée par le capteur météo de démonstration."
+      "key": "api_token",
+      "type": "secret",
+      "label": {
+        "en": "API token",
+        "fr": "Jeton d'API",
+        "de": "API-Token",
+        "es": "Token de API"
       },
-      "placeholder": { "en": "e.g. 2.3522", "fr": "ex. 2.3522" },
-      "required": true,
-      "default": 2.3522,
-      "min": -180,
-      "max": 180
+      "description": {
+        "en": "Of an API key of Crafty. It acts with the rights of its user and of the key.",
+        "fr": "D'une clé d'API de Crafty. Il agit avec les droits de son utilisateur et de la clé.",
+        "de": "Eines API-Schlüssels von Crafty. Es handelt mit den Rechten seines Benutzers und des Schlüssels.",
+        "es": "De una clave de API de Crafty. Actúa con los derechos de su usuario y de la clave."
+      },
+      "required": false
     },
     {
-      "key": "unit",
-      "type": "select",
-      "label": { "en": "Temperature unit", "fr": "Unité de température" },
+      "key": "allow_self_signed",
+      "type": "boolean",
+      "label": {
+        "en": "Accept self-signed certificates",
+        "fr": "Accepter les certificats auto-signés",
+        "de": "Selbstsignierte Zertifikate akzeptieren",
+        "es": "Aceptar certificados autofirmados"
+      },
+      "description": {
+        "en": "Crafty serves HTTPS with its own certificate by default: leave it ticked unless yours is a trusted one.",
+        "fr": "Crafty sert le HTTPS avec son propre certificat par défaut : laissez coché, sauf si le vôtre est reconnu.",
+        "de": "Crafty liefert HTTPS standardmäßig mit eigenem Zertifikat: Lass es aktiviert, außer deines ist vertrauenswürdig.",
+        "es": "Crafty sirve HTTPS con su propio certificado por defecto: déjelo marcado salvo que el suyo sea de confianza."
+      },
       "required": false,
-      "default": "celsius",
+      "default": true
+    },
+    {
+      "key": "controls",
+      "type": "section",
+      "label": {
+        "en": "Commands",
+        "fr": "Commandes",
+        "de": "Befehle",
+        "es": "Comandos"
+      },
+      "description": {
+        "en": "Start and backup are always allowed. Stop and restart throw the players out: they stay off until you allow them.",
+        "fr": "Démarrer et sauvegarder sont toujours permis. Arrêter et redémarrer déconnectent les joueurs : désactivés tant que vous ne les autorisez pas.",
+        "de": "Starten und Sichern sind immer erlaubt. Stoppen und Neustarten werfen die Spieler raus und bleiben aus, bis du sie erlaubst.",
+        "es": "Arrancar y hacer copia siempre están permitidos. Detener y reiniciar expulsan a los jugadores: desactivados hasta que usted los permita."
+      }
+    },
+    {
+      "key": "allow_stop",
+      "type": "boolean",
+      "label": {
+        "en": "Allow stop and restart",
+        "fr": "Autoriser l'arrêt et le redémarrage",
+        "de": "Stoppen und Neustarten erlauben",
+        "es": "Permitir detener y reiniciar"
+      },
+      "description": {
+        "en": "From the scenes and the widget (always with a confirmation in the widget).",
+        "fr": "Depuis les scènes et le widget (toujours avec une confirmation dans le widget).",
+        "de": "Aus Szenen und dem Widget (im Widget immer mit Bestätigung).",
+        "es": "Desde las escenas y el widget (siempre con confirmación en el widget)."
+      },
+      "required": false,
+      "default": false
+    },
+    {
+      "key": "options",
+      "type": "section",
+      "label": {
+        "en": "Options",
+        "fr": "Options",
+        "de": "Optionen",
+        "es": "Opciones"
+      }
+    },
+    {
+      "key": "poll_interval",
+      "type": "select",
+      "label": {
+        "en": "Refresh interval",
+        "fr": "Intervalle de rafraîchissement",
+        "de": "Aktualisierungsintervall",
+        "es": "Intervalo de actualización"
+      },
+      "description": {
+        "en": "How often Crafty is read. Crafty itself measures its servers every 30 seconds.",
+        "fr": "Fréquence de lecture de Crafty. Crafty mesure lui-même ses serveurs toutes les 30 secondes.",
+        "de": "Wie oft Crafty gelesen wird. Crafty misst seine Server selbst alle 30 Sekunden.",
+        "es": "Con qué frecuencia se lee Crafty. Crafty mide sus servidores cada 30 segundos."
+      },
+      "required": false,
+      "default": "30",
       "options": [
-        { "value": "celsius", "label": { "en": "Celsius", "fr": "Celsius" } },
-        { "value": "fahrenheit", "label": { "en": "Fahrenheit", "fr": "Fahrenheit" } }
+        {
+          "value": "30",
+          "label": {
+            "en": "30 seconds",
+            "fr": "30 secondes",
+            "de": "30 Sekunden",
+            "es": "30 segundos"
+          }
+        },
+        {
+          "value": "60",
+          "label": {
+            "en": "1 minute",
+            "fr": "1 minute",
+            "de": "1 Minute",
+            "es": "1 minuto"
+          }
+        },
+        {
+          "value": "120",
+          "label": {
+            "en": "2 minutes",
+            "fr": "2 minutes",
+            "de": "2 Minuten",
+            "es": "2 minutos"
+          }
+        },
+        {
+          "value": "300",
+          "label": {
+            "en": "5 minutes",
+            "fr": "5 minutes",
+            "de": "5 Minuten",
+            "es": "5 minutos"
+          }
+        }
       ]
     },
     {
-      "key": "poll_frequency",
-      "type": "number",
-      "label": { "en": "Refresh interval (s)", "fr": "Intervalle de rafraîchissement (s)" },
+      "key": "language",
+      "type": "select",
+      "label": {
+        "en": "Language of the names",
+        "fr": "Langue des noms",
+        "de": "Sprache der Namen",
+        "es": "Idioma de los nombres"
+      },
       "description": {
-        "en": "How often sensors are polled, in seconds (one minute minimum).",
-        "fr": "Fréquence d'interrogation des capteurs, en secondes (une minute minimum)."
+        "en": "Of the device features (set when a device is added) and of the texts the integration writes.",
+        "fr": "Des fonctionnalités des appareils (fixée à l'ajout d'un appareil) et des textes écrits par l'intégration.",
+        "de": "Der Gerätefunktionen (beim Hinzufügen festgelegt) und der Texte, die die Integration schreibt.",
+        "es": "De las funciones de los dispositivos (fijado al añadirlos) y de los textos que escribe la integración."
       },
       "required": false,
-      "default": 300,
-      "min": 60,
-      "max": 3600
+      "default": "fr",
+      "options": [
+        {
+          "value": "en",
+          "label": {
+            "en": "English",
+            "fr": "Anglais",
+            "de": "Englisch",
+            "es": "Inglés"
+          }
+        },
+        {
+          "value": "fr",
+          "label": {
+            "en": "French",
+            "fr": "Français",
+            "de": "Französisch",
+            "es": "Francés"
+          }
+        },
+        {
+          "value": "de",
+          "label": {
+            "en": "German",
+            "fr": "Allemand",
+            "de": "Deutsch",
+            "es": "Alemán"
+          }
+        },
+        {
+          "value": "es",
+          "label": {
+            "en": "Spanish",
+            "fr": "Espagnol",
+            "de": "Spanisch",
+            "es": "Español"
+          }
+        }
+      ]
     }
   ],
   "actions": [
     {
-      "key": "test_weather",
-      "label": { "en": "Test the weather provider", "fr": "Tester le fournisseur météo" },
-      "timeout_seconds": 30
-    },
-    {
-      "key": "identify",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "fields": [
-        {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
-        }
-      ]
+      "key": "test_connection",
+      "label": {
+        "en": "Test the connection",
+        "fr": "Tester la connexion",
+        "de": "Verbindung testen",
+        "es": "Probar la conexión"
+      },
+      "description": {
+        "en": "Reads Crafty now and lists its servers.",
+        "fr": "Lit Crafty maintenant et liste ses serveurs.",
+        "de": "Liest Crafty jetzt und listet seine Server auf.",
+        "es": "Lee Crafty ahora y enumera sus servidores."
+      },
+      "timeout_seconds": 60
     }
   ],
   "scene_triggers": [
     {
-      "key": "motion_detected",
-      "label": { "en": "Motion detected", "fr": "Mouvement détecté" },
+      "key": "player_joined",
+      "label": {
+        "en": "A player joined the Minecraft server",
+        "fr": "Un joueur a rejoint le serveur Minecraft",
+        "de": "Ein Spieler ist dem Minecraft-Server beigetreten",
+        "es": "Un jugador se ha unido al servidor Minecraft"
+      },
       "description": {
-        "en": "A demo motion sensor saw a person or an animal move.",
-        "fr": "Un détecteur de démonstration a vu bouger une personne ou un animal."
+        "en": "Seen at the next reading of Crafty. With the name when Minecraft gives the names of everyone online.",
+        "fr": "Vu à la lecture suivante de Crafty. Avec le nom quand Minecraft donne les noms de tous les joueurs connectés.",
+        "de": "Bei der nächsten Abfrage von Crafty gesehen. Mit Namen, wenn Minecraft die Namen aller Spieler liefert.",
+        "es": "Visto en la siguiente lectura de Crafty. Con el nombre cuando Minecraft da los nombres de todos los conectados."
       },
       "fields": [
         {
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Sensor", "fr": "Détecteur" }
+          "label": {
+            "en": "Server (empty: any)",
+            "fr": "Serveur (vide : n'importe lequel)",
+            "de": "Server (leer: beliebig)",
+            "es": "Servidor (vacío: cualquiera)"
+          }
         },
         {
-          "key": "target",
-          "type": "multi_select",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" },
-          "options": [
-            { "value": "person", "label": { "en": "Person", "fr": "Personne" } },
-            { "value": "animal", "label": { "en": "Animal", "fr": "Animal" } }
-          ]
+          "key": "player",
+          "type": "string",
+          "label": {
+            "en": "Player name (empty: anyone)",
+            "fr": "Nom du joueur (vide : n'importe qui)",
+            "de": "Spielername (leer: beliebig)",
+            "es": "Nombre del jugador (vacío: cualquiera)"
+          },
+          "description": {
+            "en": "Exactly as in the game. Minecraft gives at most 12 names: beyond, the event has no name.",
+            "fr": "Exactement comme dans le jeu. Minecraft donne 12 noms au plus : au-delà, l'événement n'a pas de nom.",
+            "de": "Genau wie im Spiel. Minecraft liefert höchstens 12 Namen: Darüber hat das Ereignis keinen Namen.",
+            "es": "Exactamente como en el juego. Minecraft da 12 nombres como máximo: más allá, el evento no tiene nombre."
+          }
         }
       ],
       "variables": [
         {
-          "key": "target",
+          "key": "player",
           "type": "string",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" }
+          "label": {
+            "en": "Player name (empty if unknown)",
+            "fr": "Nom du joueur (vide si inconnu)",
+            "de": "Spielername (leer, wenn unbekannt)",
+            "es": "Nombre del jugador (vacío si se desconoce)"
+          }
+        },
+        {
+          "key": "server",
+          "type": "string",
+          "label": {
+            "en": "Server name",
+            "fr": "Nom du serveur",
+            "de": "Servername",
+            "es": "Nombre del servidor"
+          }
+        },
+        {
+          "key": "device",
+          "type": "string",
+          "label": {
+            "en": "Server device",
+            "fr": "Appareil du serveur",
+            "de": "Server-Gerät",
+            "es": "Dispositivo del servidor"
+          }
+        },
+        {
+          "key": "players_online",
+          "type": "number",
+          "label": {
+            "en": "Players online",
+            "fr": "Joueurs connectés",
+            "de": "Spieler online",
+            "es": "Jugadores conectados"
+          }
+        },
+        {
+          "key": "players_max",
+          "type": "number",
+          "label": {
+            "en": "Player slots",
+            "fr": "Places",
+            "de": "Spielerplätze",
+            "es": "Plazas"
+          }
+        }
+      ]
+    },
+    {
+      "key": "player_left",
+      "label": {
+        "en": "A player left the Minecraft server",
+        "fr": "Un joueur a quitté le serveur Minecraft",
+        "de": "Ein Spieler hat den Minecraft-Server verlassen",
+        "es": "Un jugador ha salido del servidor Minecraft"
+      },
+      "description": {
+        "en": "Not fired when the server stops: the players are then unknown.",
+        "fr": "Pas déclenché quand le serveur s'arrête : les joueurs sont alors inconnus.",
+        "de": "Nicht ausgelöst, wenn der Server stoppt: Die Spieler sind dann unbekannt.",
+        "es": "No se activa cuando el servidor se detiene: los jugadores son entonces desconocidos."
+      },
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Server (empty: any)",
+            "fr": "Serveur (vide : n'importe lequel)",
+            "de": "Server (leer: beliebig)",
+            "es": "Servidor (vacío: cualquiera)"
+          }
+        },
+        {
+          "key": "player",
+          "type": "string",
+          "label": {
+            "en": "Player name (empty: anyone)",
+            "fr": "Nom du joueur (vide : n'importe qui)",
+            "de": "Spielername (leer: beliebig)",
+            "es": "Nombre del jugador (vacío: cualquiera)"
+          },
+          "description": {
+            "en": "Exactly as in the game. Minecraft gives at most 12 names: beyond, the event has no name.",
+            "fr": "Exactement comme dans le jeu. Minecraft donne 12 noms au plus : au-delà, l'événement n'a pas de nom.",
+            "de": "Genau wie im Spiel. Minecraft liefert höchstens 12 Namen: Darüber hat das Ereignis keinen Namen.",
+            "es": "Exactamente como en el juego. Minecraft da 12 nombres como máximo: más allá, el evento no tiene nombre."
+          }
+        }
+      ],
+      "variables": [
+        {
+          "key": "player",
+          "type": "string",
+          "label": {
+            "en": "Player name (empty if unknown)",
+            "fr": "Nom du joueur (vide si inconnu)",
+            "de": "Spielername (leer, wenn unbekannt)",
+            "es": "Nombre del jugador (vacío si se desconoce)"
+          }
+        },
+        {
+          "key": "minutes_played",
+          "type": "number",
+          "label": {
+            "en": "Minutes played",
+            "fr": "Minutes jouées",
+            "de": "Gespielte Minuten",
+            "es": "Minutos jugados"
+          }
+        },
+        {
+          "key": "server",
+          "type": "string",
+          "label": {
+            "en": "Server name",
+            "fr": "Nom du serveur",
+            "de": "Servername",
+            "es": "Nombre del servidor"
+          }
+        },
+        {
+          "key": "device",
+          "type": "string",
+          "label": {
+            "en": "Server device",
+            "fr": "Appareil du serveur",
+            "de": "Server-Gerät",
+            "es": "Dispositivo del servidor"
+          }
+        },
+        {
+          "key": "players_online",
+          "type": "number",
+          "label": {
+            "en": "Players online",
+            "fr": "Joueurs connectés",
+            "de": "Spieler online",
+            "es": "Jugadores conectados"
+          }
+        },
+        {
+          "key": "players_max",
+          "type": "number",
+          "label": {
+            "en": "Player slots",
+            "fr": "Places",
+            "de": "Spielerplätze",
+            "es": "Plazas"
+          }
+        }
+      ]
+    },
+    {
+      "key": "server_empty",
+      "label": {
+        "en": "The Minecraft server is empty",
+        "fr": "Le serveur Minecraft est vide",
+        "de": "Der Minecraft-Server ist leer",
+        "es": "El servidor Minecraft está vacío"
+      },
+      "description": {
+        "en": "The last player left, the server still running: the moment to stop it or back it up.",
+        "fr": "Le dernier joueur est parti, le serveur tourne encore : le moment de l'arrêter ou de le sauvegarder.",
+        "de": "Der letzte Spieler ist gegangen, der Server läuft noch: der Moment, ihn zu stoppen oder zu sichern.",
+        "es": "El último jugador se ha ido y el servidor sigue en marcha: el momento de detenerlo o hacer una copia."
+      },
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Server (empty: any)",
+            "fr": "Serveur (vide : n'importe lequel)",
+            "de": "Server (leer: beliebig)",
+            "es": "Servidor (vacío: cualquiera)"
+          }
+        }
+      ],
+      "variables": [
+        {
+          "key": "server",
+          "type": "string",
+          "label": {
+            "en": "Server name",
+            "fr": "Nom du serveur",
+            "de": "Servername",
+            "es": "Nombre del servidor"
+          }
+        },
+        {
+          "key": "device",
+          "type": "string",
+          "label": {
+            "en": "Server device",
+            "fr": "Appareil du serveur",
+            "de": "Server-Gerät",
+            "es": "Dispositivo del servidor"
+          }
+        },
+        {
+          "key": "players_max",
+          "type": "number",
+          "label": {
+            "en": "Player slots",
+            "fr": "Places",
+            "de": "Spielerplätze",
+            "es": "Plazas"
+          }
+        }
+      ]
+    },
+    {
+      "key": "server_full",
+      "label": {
+        "en": "The Minecraft server is full",
+        "fr": "Le serveur Minecraft est plein",
+        "de": "Der Minecraft-Server ist voll",
+        "es": "El servidor Minecraft está lleno"
+      },
+      "description": {
+        "en": "Every player slot is taken.",
+        "fr": "Toutes les places sont prises.",
+        "de": "Alle Spielerplätze sind belegt.",
+        "es": "Todas las plazas están ocupadas."
+      },
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Server (empty: any)",
+            "fr": "Serveur (vide : n'importe lequel)",
+            "de": "Server (leer: beliebig)",
+            "es": "Servidor (vacío: cualquiera)"
+          }
+        }
+      ],
+      "variables": [
+        {
+          "key": "server",
+          "type": "string",
+          "label": {
+            "en": "Server name",
+            "fr": "Nom du serveur",
+            "de": "Servername",
+            "es": "Nombre del servidor"
+          }
+        },
+        {
+          "key": "device",
+          "type": "string",
+          "label": {
+            "en": "Server device",
+            "fr": "Appareil du serveur",
+            "de": "Server-Gerät",
+            "es": "Dispositivo del servidor"
+          }
+        },
+        {
+          "key": "players_online",
+          "type": "number",
+          "label": {
+            "en": "Players online",
+            "fr": "Joueurs connectés",
+            "de": "Spieler online",
+            "es": "Jugadores conectados"
+          }
+        },
+        {
+          "key": "players_max",
+          "type": "number",
+          "label": {
+            "en": "Player slots",
+            "fr": "Places",
+            "de": "Spielerplätze",
+            "es": "Plazas"
+          }
+        }
+      ]
+    },
+    {
+      "key": "server_crashed",
+      "label": {
+        "en": "A server stopped unexpectedly",
+        "fr": "Un serveur s'est arrêté de façon inattendue",
+        "de": "Ein Server wurde unerwartet beendet",
+        "es": "Un servidor se ha detenido de forma inesperada"
+      },
+      "description": {
+        "en": "Not asked from Gladys nor from Crafty: no clean shutdown in its log (Logs permission), or Crafty's crash detection.",
+        "fr": "Ni demandé par Gladys ni par Crafty : pas d'arrêt propre dans son journal (droit Journaux), ou la détection de plantage de Crafty.",
+        "de": "Weder von Gladys noch von Crafty angefordert: kein sauberes Herunterfahren im Log (Log-Berechtigung) oder Absturzerkennung von Crafty.",
+        "es": "Ni pedido por Gladys ni por Crafty: sin apagado limpio en su registro (permiso Registros), o la detección de fallos de Crafty."
+      },
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Server (empty: any)",
+            "fr": "Serveur (vide : n'importe lequel)",
+            "de": "Server (leer: beliebig)",
+            "es": "Servidor (vacío: cualquiera)"
+          }
+        }
+      ],
+      "variables": [
+        {
+          "key": "server",
+          "type": "string",
+          "label": {
+            "en": "Server name",
+            "fr": "Nom du serveur",
+            "de": "Servername",
+            "es": "Nombre del servidor"
+          }
+        },
+        {
+          "key": "device",
+          "type": "string",
+          "label": {
+            "en": "Server device",
+            "fr": "Appareil du serveur",
+            "de": "Server-Gerät",
+            "es": "Dispositivo del servidor"
+          }
+        }
+      ]
+    },
+    {
+      "key": "server_restarted",
+      "label": {
+        "en": "A server restarted",
+        "fr": "Un serveur a redémarré",
+        "de": "Ein Server wurde neu gestartet",
+        "es": "Un servidor se ha reiniciado"
+      },
+      "description": {
+        "en": "Running again after a restart (from Gladys or Crafty) or after an unexpected stop.",
+        "fr": "De nouveau en marche après un redémarrage (depuis Gladys ou Crafty) ou un arrêt inattendu.",
+        "de": "Läuft wieder nach einem Neustart (aus Gladys oder Crafty) oder einem unerwarteten Stopp.",
+        "es": "De nuevo en marcha tras un reinicio (desde Gladys o Crafty) o una parada inesperada."
+      },
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Server (empty: any)",
+            "fr": "Serveur (vide : n'importe lequel)",
+            "de": "Server (leer: beliebig)",
+            "es": "Servidor (vacío: cualquiera)"
+          }
+        }
+      ],
+      "variables": [
+        {
+          "key": "server",
+          "type": "string",
+          "label": {
+            "en": "Server name",
+            "fr": "Nom du serveur",
+            "de": "Servername",
+            "es": "Nombre del servidor"
+          }
+        },
+        {
+          "key": "device",
+          "type": "string",
+          "label": {
+            "en": "Server device",
+            "fr": "Appareil du serveur",
+            "de": "Server-Gerät",
+            "es": "Dispositivo del servidor"
+          }
+        },
+        {
+          "key": "after_crash",
+          "type": "boolean",
+          "label": {
+            "en": "After an unexpected stop",
+            "fr": "Après un arrêt inattendu",
+            "de": "Nach einem unerwarteten Stopp",
+            "es": "Tras una parada inesperada"
+          }
         }
       ]
     }
   ],
   "scene_actions": [
     {
-      "key": "identify_device",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "description": {
-        "en": "Make a device signal itself (the demo light blinks).",
-        "fr": "Fait se signaler un appareil (la lampe de démonstration clignote)."
+      "key": "start_server",
+      "label": {
+        "en": "Start a Minecraft server",
+        "fr": "Démarrer un serveur Minecraft",
+        "de": "Einen Minecraft-Server starten",
+        "es": "Arrancar un servidor Minecraft"
       },
-      "timeout_seconds": 15,
+      "description": {
+        "en": "Asks Crafty to start it. Nothing is sent when it already runs.",
+        "fr": "Demande à Crafty de le démarrer. Rien n'est envoyé s'il tourne déjà.",
+        "de": "Bittet Crafty, ihn zu starten. Nichts wird gesendet, wenn er bereits läuft.",
+        "es": "Pide a Crafty que lo arranque. No se envía nada si ya está en marcha."
+      },
+      "timeout_seconds": 30,
       "fields": [
         {
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
+          "label": {
+            "en": "Server",
+            "fr": "Serveur",
+            "de": "Server",
+            "es": "Servidor"
+          },
           "required": true
         }
       ],
       "outputs": [
         {
-          "key": "signalled",
+          "key": "sent",
           "type": "boolean",
-          "label": { "en": "Device signalled", "fr": "Appareil signalé" }
+          "label": {
+            "en": "Command sent",
+            "fr": "Commande envoyée",
+            "de": "Befehl gesendet",
+            "es": "Comando enviado"
+          }
+        }
+      ]
+    },
+    {
+      "key": "stop_server",
+      "label": {
+        "en": "Stop a Minecraft server",
+        "fr": "Arrêter un serveur Minecraft",
+        "de": "Einen Minecraft-Server stoppen",
+        "es": "Detener un servidor Minecraft"
+      },
+      "description": {
+        "en": "Clean shutdown, players thrown out. Only once allowed in the configuration.",
+        "fr": "Arrêt propre, joueurs déconnectés. Seulement une fois autorisé dans la configuration.",
+        "de": "Sauberes Herunterfahren, Spieler fliegen raus. Nur wenn in der Konfiguration erlaubt.",
+        "es": "Apagado limpio, jugadores expulsados. Solo una vez permitido en la configuración."
+      },
+      "timeout_seconds": 30,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Server",
+            "fr": "Serveur",
+            "de": "Server",
+            "es": "Servidor"
+          },
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "sent",
+          "type": "boolean",
+          "label": {
+            "en": "Command sent",
+            "fr": "Commande envoyée",
+            "de": "Befehl gesendet",
+            "es": "Comando enviado"
+          }
+        }
+      ]
+    },
+    {
+      "key": "restart_server",
+      "label": {
+        "en": "Restart a Minecraft server",
+        "fr": "Redémarrer un serveur Minecraft",
+        "de": "Einen Minecraft-Server neu starten",
+        "es": "Reiniciar un servidor Minecraft"
+      },
+      "description": {
+        "en": "Players thrown out for a moment. Only once allowed in the configuration.",
+        "fr": "Joueurs déconnectés un moment. Seulement une fois autorisé dans la configuration.",
+        "de": "Spieler fliegen kurz raus. Nur wenn in der Konfiguration erlaubt.",
+        "es": "Jugadores expulsados un momento. Solo una vez permitido en la configuración."
+      },
+      "timeout_seconds": 30,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Server",
+            "fr": "Serveur",
+            "de": "Server",
+            "es": "Servidor"
+          },
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "sent",
+          "type": "boolean",
+          "label": {
+            "en": "Command sent",
+            "fr": "Commande envoyée",
+            "de": "Befehl gesendet",
+            "es": "Comando enviado"
+          }
+        }
+      ]
+    },
+    {
+      "key": "backup_server",
+      "label": {
+        "en": "Back up a Minecraft server",
+        "fr": "Sauvegarder un serveur Minecraft",
+        "de": "Einen Minecraft-Server sichern",
+        "es": "Hacer copia de un servidor Minecraft"
+      },
+      "description": {
+        "en": "Runs its default backup of Crafty, with its settings (some stop the server).",
+        "fr": "Lance sa sauvegarde par défaut de Crafty, avec ses réglages (certaines arrêtent le serveur).",
+        "de": "Startet sein Standard-Backup von Crafty, mit dessen Einstellungen (manche stoppen den Server).",
+        "es": "Lanza su copia por defecto de Crafty, con sus ajustes (algunas detienen el servidor)."
+      },
+      "timeout_seconds": 30,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Server",
+            "fr": "Serveur",
+            "de": "Server",
+            "es": "Servidor"
+          },
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "sent",
+          "type": "boolean",
+          "label": {
+            "en": "Command sent",
+            "fr": "Commande envoyée",
+            "de": "Befehl gesendet",
+            "es": "Comando enviado"
+          }
+        }
+      ]
+    },
+    {
+      "key": "read_server",
+      "label": {
+        "en": "Read a Minecraft server",
+        "fr": "Lire un serveur Minecraft",
+        "de": "Einen Minecraft-Server lesen",
+        "es": "Leer un servidor Minecraft"
+      },
+      "description": {
+        "en": "Reads Crafty now. Its state goes to the next steps: a message, or \"Continue only if\" on Running.",
+        "fr": "Lit Crafty maintenant. Son état va aux étapes suivantes : un message, ou « Continuer seulement si » sur En marche.",
+        "de": "Liest Crafty jetzt. Sein Zustand geht an die nächsten Schritte: eine Nachricht oder „Nur fortfahren, wenn“ auf Läuft.",
+        "es": "Lee Crafty ahora. Su estado pasa a los pasos siguientes: un mensaje, o «Continuar solo si» sobre En marcha."
+      },
+      "timeout_seconds": 60,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Server",
+            "fr": "Serveur",
+            "de": "Server",
+            "es": "Servidor"
+          },
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "running",
+          "type": "boolean",
+          "label": {
+            "en": "Running",
+            "fr": "En marche",
+            "de": "Läuft",
+            "es": "En marcha"
+          }
+        },
+        {
+          "key": "players_online",
+          "type": "number",
+          "label": {
+            "en": "Players online",
+            "fr": "Joueurs connectés",
+            "de": "Spieler online",
+            "es": "Jugadores conectados"
+          }
+        },
+        {
+          "key": "players_max",
+          "type": "number",
+          "label": {
+            "en": "Player slots",
+            "fr": "Places",
+            "de": "Spielerplätze",
+            "es": "Plazas"
+          }
+        },
+        {
+          "key": "players",
+          "type": "string",
+          "label": {
+            "en": "Players",
+            "fr": "Joueurs",
+            "de": "Spieler",
+            "es": "Jugadores"
+          }
+        },
+        {
+          "key": "cpu",
+          "type": "number",
+          "label": {
+            "en": "CPU (%)",
+            "fr": "Processeur (%)",
+            "de": "CPU (%)",
+            "es": "CPU (%)"
+          }
+        },
+        {
+          "key": "memory",
+          "type": "number",
+          "label": {
+            "en": "Memory (MB)",
+            "fr": "Mémoire (Mo)",
+            "de": "Arbeitsspeicher (MB)",
+            "es": "Memoria (MB)"
+          }
+        },
+        {
+          "key": "version",
+          "type": "string",
+          "label": {
+            "en": "Version",
+            "fr": "Version",
+            "de": "Version",
+            "es": "Versión"
+          }
+        },
+        {
+          "key": "server",
+          "type": "string",
+          "label": {
+            "en": "Server name",
+            "fr": "Nom du serveur",
+            "de": "Servername",
+            "es": "Nombre del servidor"
+          }
         }
       ]
     }
   ],
   "widgets": [
     {
-      "key": "demo_status",
-      "label": { "en": "Demo status", "fr": "État de la démo" },
-      "description": {
-        "en": "Live temperature and plug power, plug connection and observed location.",
-        "fr": "Température et puissance en direct, connexion de la prise, position observée."
+      "key": "crafty_servers",
+      "label": {
+        "en": "Crafty servers",
+        "fr": "Serveurs Crafty",
+        "de": "Crafty-Server",
+        "es": "Servidores Crafty"
       },
-      "icon": "activity",
-      "action_timeout_seconds": 15
+      "description": {
+        "en": "Whether each server runs, who is playing, with Start, Backup (and Stop, Restart if allowed) buttons.",
+        "fr": "Serveurs en marche, qui joue, boutons Démarrer, Sauvegarder (Arrêter, Redémarrer si autorisés).",
+        "de": "Ob jeder Server läuft, wer spielt, mit Starten, Backup (und Stoppen, Neustarten, wenn erlaubt).",
+        "es": "Servidores en marcha, quién juega, botones Arrancar, Copia (Detener, Reiniciar si se permite)."
+      },
+      "icon": "server",
+      "action_timeout_seconds": 60,
+      "settings": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Server (empty: all)",
+            "fr": "Serveur (vide : tous)",
+            "de": "Server (leer: alle)",
+            "es": "Servidor (vacío: todos)"
+          },
+          "required": false
+        }
+      ]
     }
   ]
 }

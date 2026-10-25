@@ -1,169 +1,293 @@
 // -----------------------------------------------------------------------------
-// Dashboard widgets (SDK v0.14+, Gladys 5.1+).
+// Dashboard widget (manifest `widgets`, Gladys 5.1+): `crafty_servers`.
 //
-// A widget puts the integration's own data on the Gladys dashboard without a
-// dedicated core widget. The manifest `widgets` field declares its identity
-// (key, label, icon, optional per-instance `settings`); at runtime the
-// integration returns a DECLARATIVE content — `text`, `value`, `gauge`,
-// `status`, `chart`, `card-list`, `image`, `button` — that the core renders
-// with its own theme, dark mode and translations. No HTML, no CSS.
+// The use case: the tablet in the living room shows whether the Minecraft
+// server of the kids is running and who is on it, and starts it (or backs it
+// up) without opening Crafty. So: one tile per server (players online /
+// slots, or its state), a status list with each server's state and who is
+// playing, then the buttons — Start for a stopped server, Stop and Restart
+// only when the configuration allows them, Backup for a single server — each
+// confirmed first (`confirm`), and Refresh.
 //
-// Each entry of WIDGETS is keyed by the widget `key` and exposes:
-//   - get(gladys, { settings, language, units, config }): the content,
-//     registered by index.js with `gladys.onWidgetGet(key, ...)`;
-//   - action(gladys, { actionKey, params, settings, config }) (optional): a
-//     tapped `button` carrying an `action`, registered with
-//     `gladys.onWidgetAction`.
-//
-// Check your contents in the tests with `validateWidgetContent` (exported by
-// the SDK, see test/widgets.test.js), or run with DEBUG=gladys-integration-sdk
-// to have the SDK log every violation of the vocabulary and the budget.
+// One server (chosen in the widget settings, or the only one): three tiles
+// (players, CPU, memory). Several: one tile each, three at most. Budget
+// (8 components, 4 buttons): three tiles, one status list, three command
+// buttons, Refresh. The values are sent as values, not bound to device
+// features, so the widget works before the devices are added to Gladys. The
+// core gives the user's language: texts are localized with it.
 // -----------------------------------------------------------------------------
 
-import {
-  createLogger,
-  DEVICE_FEATURE_CATEGORIES,
-  DEVICE_TRANSPORTS,
-  WIDGET_COLORS,
-} from '@gladysassistant/integration-sdk';
-import { identifyDevice } from './devices/index.js';
-import { weatherStation } from './devices/weatherStation.js';
-import { plug } from './devices/plug.js';
-import { light } from './devices/light.js';
+import { WIDGET_COLORS } from '@gladysassistant/integration-sdk';
+import { ACTIONS } from './crafty/client.js';
+import { deviceIds } from './devices.js';
+import { WIDGET_KEY } from './hub.js';
+import { ACTION_TEXT, CONNECTION_TEXT, ERROR_TEXT, pick } from './texts.js';
 
-const logger = createLogger({ name: 'widgets' });
+export const MAX_SERVERS = 3;
+export const MAX_ROWS = 10;
+// The core keeps 4 buttons per widget: three commands and Refresh.
+export const MAX_BUTTONS = 3;
 
-// Widget key, as declared in the manifest `widgets` field.
-export const DEMO_STATUS_WIDGET = 'demo_status';
+// Widget action verbs (internal to the widget content: never stored by users).
+const VERBS = {
+  start: ACTIONS.START,
+  stop: ACTIONS.STOP,
+  restart: ACTIONS.RESTART,
+  backup: ACTIONS.BACKUP,
+};
+export const REFRESH = 'refresh';
 
-// Keys of the `button` actions the demo_status content declares.
-const DEMO_STATUS_ACTIONS = { IDENTIFY_LIGHT: 'identify_light' };
-
-// How the plug transport reads in the status list.
-const TRANSPORT_STATUS = {
-  [DEVICE_TRANSPORTS.LOCAL]: { value: { en: 'Local', fr: 'Locale' }, color: WIDGET_COLORS.SUCCESS },
-  [DEVICE_TRANSPORTS.CLOUD]: { value: { en: 'Cloud', fr: 'Cloud' }, color: WIDGET_COLORS.INFO },
-  [DEVICE_TRANSPORTS.UNREACHABLE]: {
-    value: { en: 'Unreachable', fr: 'Injoignable' },
-    color: WIDGET_COLORS.DANGER,
+export const TEXT = {
+  unknown: {
+    en: 'This server is no longer in Crafty: choose another one in the widget settings.',
+    fr: "Ce serveur n'est plus dans Crafty : choisissez-en un autre dans les réglages du widget.",
+    de: 'Dieser Server ist nicht mehr in Crafty: Wähle einen anderen in den Widget-Einstellungen.',
+    es: 'Este servidor ya no está en Crafty: elija otro en la configuración del widget.',
   },
+  players: { en: 'Players', fr: 'Joueurs', de: 'Spieler', es: 'Jugadores' },
+  cpu: { en: 'CPU', fr: 'Processeur', de: 'CPU', es: 'CPU' },
+  memory: { en: 'Memory', fr: 'Mémoire', de: 'Arbeitsspeicher', es: 'Memoria' },
+  running: { en: 'Running', fr: 'En marche', de: 'Läuft', es: 'En marcha' },
+  stopped: { en: 'Stopped', fr: 'Arrêté', de: 'Gestoppt', es: 'Detenido' },
+  crashed: { en: 'Crashed', fr: 'Planté', de: 'Abgestürzt', es: 'Caído' },
+  starting: { en: 'Starting…', fr: 'Démarrage…', de: 'Startet…', es: 'Arrancando…' },
+  unknown_state: { en: 'Unknown', fr: 'Inconnu', de: 'Unbekannt', es: 'Desconocido' },
+  waiting: { en: 'Waiting…', fr: 'En attente…', de: 'Warte…', es: 'Esperando…' },
+  nobody: { en: 'Nobody', fr: 'Personne', de: 'Niemand', es: 'Nadie' },
+  start: { en: 'Start', fr: 'Démarrer', de: 'Starten', es: 'Arrancar' },
+  stop: { en: 'Stop', fr: 'Arrêter', de: 'Stoppen', es: 'Detener' },
+  restart: { en: 'Restart', fr: 'Redémarrer', de: 'Neustarten', es: 'Reiniciar' },
+  backup: { en: 'Backup', fr: 'Sauvegarder', de: 'Backup', es: 'Copia' },
+  refresh: { en: 'Refresh', fr: 'Actualiser', de: 'Aktualisieren', es: 'Actualizar' },
 };
 
-// A live tile references a feature by its external_id: read it from the
-// discovery payload itself, so the widget and the device never disagree.
-function featureExternalId(gladys, config, blueprint, category) {
-  const device = blueprint.buildDevice(gladys, config);
-  return device.features.find((feature) => feature.category === category).external_id;
+const t = (text, language) => pick(text, language);
+const fit = (text, max) => (text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text);
+
+function message(text, language, withRefresh = false) {
+  const components = [{ type: 'text', variant: 'body', text: t(text, language) }];
+  if (withRefresh) {
+    components.push(refreshButton(language));
+  }
+  return { ttl_seconds: withRefresh ? 60 : 300, components };
 }
 
-function plugConnectionStatus(gladys, config) {
-  const { transport, degraded } = plug.transport(gladys, config);
-  const { value, color } = TRANSPORT_STATUS[transport];
-  if (degraded) {
+const refreshButton = (language) => ({
+  type: 'button',
+  label: t(TEXT.refresh, language),
+  icon: 'refresh-cw',
+  style: 'secondary',
+  action: { key: REFRESH },
+});
+
+// Statistics unreadable (a permission missing): the last ones are not shown.
+const running = (record) => !record.error && record.stats?.running === true;
+// Stopped after a crash, and not started since.
+const crashed = (record) => !running(record) && record.pendingRestart === 'crash';
+
+/** The state word and style of a server. */
+function stateOf(record, language) {
+  if (record.error) {
     return {
-      value: { en: `${value.en} (degraded mode)`, fr: `${value.fr} (mode dégradé)` },
+      value: t(TEXT.unknown_state, language),
+      icon: 'alert-circle',
       color: WIDGET_COLORS.WARNING,
     };
   }
-  return { value, color };
+  if (!record.stats) {
+    return { value: t(TEXT.waiting, language), icon: 'clock', color: WIDGET_COLORS.NEUTRAL };
+  }
+  if (running(record)) {
+    if (!record.stats.answering && record.server.countsPlayers) {
+      return { value: t(TEXT.starting, language), icon: 'loader', color: WIDGET_COLORS.INFO };
+    }
+    return { value: t(TEXT.running, language), icon: 'check-circle', color: WIDGET_COLORS.SUCCESS };
+  }
+  if (crashed(record)) {
+    return {
+      value: t(TEXT.crashed, language),
+      icon: 'alert-triangle',
+      color: WIDGET_COLORS.DANGER,
+    };
+  }
+  return { value: t(TEXT.stopped, language), icon: 'x-circle', color: WIDGET_COLORS.NEUTRAL };
+}
+
+/** The tile of one server: players online / slots while it answers, else its state. */
+function serverTile(record, label, language) {
+  const state = stateOf(record, language);
+  const { stats } = record;
+  if (running(record) && stats.answering && record.server.countsPlayers) {
+    return {
+      type: 'value',
+      value: fit(stats.max > 0 ? `${stats.online}/${stats.max}` : String(stats.online), 12),
+      label: fit(label, 24),
+      icon: 'users',
+      color: WIDGET_COLORS.SUCCESS,
+    };
+  }
+  return { type: 'value', value: fit(state.value, 12), label: fit(label, 24), ...state };
+}
+
+/** The status row of one server: its state, with the version while running. */
+function stateRow(record, language) {
+  const state = stateOf(record, language);
+  const version = running(record) ? record.stats.version : null;
+  return {
+    label: fit(record.server.name, 40),
+    icon: state.icon,
+    value: fit(version ? `${state.value} · ${version}` : state.value, 40),
+    color: state.color,
+  };
+}
+
+/** Who is playing on one server, as one row (null: not answering, or no players). */
+function playersRow(record, label, language) {
+  const { stats } = record;
+  if (!running(record) || !stats.answering || !record.server.countsPlayers) {
+    return null;
+  }
+  let value;
+  if (stats.online === 0) {
+    value = t(TEXT.nobody, language);
+  } else if (stats.players && stats.players.length > 0) {
+    const missing = stats.online - stats.players.length;
+    value = stats.players.join(', ') + (missing > 0 ? ` +${missing}` : '');
+  } else {
+    value = String(stats.online);
+  }
+  return {
+    label: fit(label, 40),
+    icon: 'user',
+    value: fit(value, 40),
+    color: WIDGET_COLORS.NEUTRAL,
+  };
+}
+
+/** The command buttons a server offers, most useful first. */
+function commandsOf(record, single, allowStop) {
+  const verbs = [];
+  if (running(record)) {
+    if (allowStop) {
+      verbs.push(...(single ? ['restart', 'stop'] : ['stop']));
+    }
+  } else if (record.stats) {
+    verbs.push('start');
+  }
+  if (single) {
+    verbs.push('backup');
+  }
+  return verbs.map((verb) => ({ verb, record }));
+}
+
+async function get(hub, { settings, language = 'en' } = {}) {
+  if (!hub.client) {
+    return message(
+      hub.config?.urlInvalid ? CONNECTION_TEXT.badUrl : CONNECTION_TEXT.missing,
+      language,
+    );
+  }
+  if (hub.error) {
+    return message(ERROR_TEXT[hub.error.kind], language, true);
+  }
+  if (hub.records.size === 0) {
+    return message(CONNECTION_TEXT.noServer, language, true);
+  }
+  const records = hub.view(settings?.device).slice(0, MAX_SERVERS);
+  if (records.length === 0) {
+    return message(TEXT.unknown, language);
+  }
+  const single = records.length === 1;
+  const components = [];
+  if (single) {
+    const [record] = records;
+    components.push(serverTile(record, record.server.name, language));
+    if (running(record)) {
+      components.push(
+        {
+          type: 'value',
+          value: Math.round(record.stats.cpu),
+          unit: '%',
+          label: t(TEXT.cpu, language),
+          icon: 'cpu',
+        },
+        {
+          type: 'value',
+          value: Math.round(record.stats.memoryBytes / (1024 * 1024)),
+          unit: 'MB',
+          label: t(TEXT.memory, language),
+          icon: 'hard-drive',
+        },
+      );
+    }
+  } else {
+    for (const record of records) {
+      components.push(serverTile(record, record.server.name, language));
+    }
+  }
+
+  const items = [];
+  for (const record of records) {
+    items.push(stateRow(record, language));
+    const row = playersRow(
+      record,
+      single ? t(TEXT.players, language) : `${t(TEXT.players, language)} · ${record.server.name}`,
+      language,
+    );
+    if (row) {
+      items.push(row);
+    }
+  }
+  components.push({ type: 'status', items: items.slice(0, MAX_ROWS) });
+
+  // The device travels in the params; the key is unique (the core drops a
+  // button whose key is taken).
+  const commands = records
+    .flatMap((record) => commandsOf(record, single, hub.config.allowStop))
+    .slice(0, MAX_BUTTONS);
+  commands.forEach(({ verb, record }, index) => {
+    components.push({
+      type: 'button',
+      label: fit(
+        single ? t(TEXT[verb], language) : `${t(TEXT[verb], language)} ${record.server.name}`,
+        24,
+      ),
+      icon: { start: 'play', stop: 'square', restart: 'rotate-cw', backup: 'archive' }[verb],
+      style: verb === 'stop' ? 'danger' : 'secondary',
+      action: {
+        key: `${verb}_${index + 1}`,
+        params: { device: deviceIds(hub.gladys, record.server.id).device },
+        confirm: true,
+      },
+    });
+  });
+  components.push(refreshButton(language));
+
+  // A server starting or stopping moves: refresh sooner.
+  const moving = records.some(
+    (record) => record.stats && running(record) && !record.stats.answering,
+  );
+  return { ttl_seconds: moving ? 20 : 60, components };
+}
+
+async function action(hub, { actionKey, params = {}, language }) {
+  if (actionKey === REFRESH) {
+    await hub.pollAll();
+    return hub.error ? ERROR_TEXT[hub.error.kind] : ACTION_TEXT.refreshed;
+  }
+  const match = /^(start|stop|restart|backup)_\d{1,2}$/u.exec(actionKey ?? '');
+  if (!match || typeof params.device !== 'string') {
+    throw new Error(`Unknown action ${actionKey}`);
+  }
+  // The rules (stop allowed?) are checked again here: the content may predate a change.
+  const { message: text } = await hub.command(
+    params.device,
+    VERBS[match[1]],
+    language ?? hub.language,
+  );
+  return text;
 }
 
 export const WIDGETS = {
-  [DEMO_STATUS_WIDGET]: {
-    // `settings` holds the per-instance values of the declared `settings`
-    // (none here); `language` and `units` are those of the user viewing the
-    // dashboard, for the values you format yourself. Multi-language objects
-    // (`{ en, fr }`) are picked by the core, like everywhere else.
-    async get(gladys, { config }) {
-      logger.debug(`onWidgetGet <- ${DEMO_STATUS_WIDGET}`);
-      return {
-        // Reload policy: the computed parts below only change with the
-        // config, and index.js nudges the widget on every (re)connection and
-        // config update (see refreshWidgets) — the TTL is just a safety net.
-        ttl_seconds: 300,
-        components: [
-          // Device-bound tiles: LIVE, they follow the published states over
-          // the core's real-time path. No TTL, no nudge involved.
-          {
-            type: 'value',
-            label: { en: 'Temperature', fr: 'Température' },
-            icon: 'thermometer',
-            device_feature: featureExternalId(
-              gladys,
-              config,
-              weatherStation,
-              DEVICE_FEATURE_CATEGORIES.TEMPERATURE_SENSOR,
-            ),
-          },
-          {
-            type: 'value',
-            label: { en: 'Office plug', fr: 'Prise du bureau' },
-            icon: 'zap',
-            device_feature: featureExternalId(
-              gladys,
-              config,
-              plug,
-              DEVICE_FEATURE_CATEGORIES.ENERGY_SENSOR,
-            ),
-          },
-          // Computed rows: what the integration knows that no device feature
-          // carries. Served from the core cache until the TTL or a nudge.
-          {
-            type: 'status',
-            items: [
-              {
-                label: { en: 'Plug connection', fr: 'Connexion de la prise' },
-                icon: 'wifi',
-                ...plugConnectionStatus(gladys, config),
-              },
-              {
-                label: { en: 'Observed location', fr: 'Position observée' },
-                icon: 'map-pin',
-                value: `${config.latitude.toFixed(2)}, ${config.longitude.toFixed(2)}`,
-                color: WIDGET_COLORS.NEUTRAL,
-              },
-            ],
-          },
-          // `params` are declared HERE and sent back as-is: the handler never
-          // receives user input (a dashboard can hang on a public wall).
-          {
-            type: 'button',
-            label: { en: 'Identify the light', fr: 'Identifier la lampe' },
-            icon: 'eye',
-            style: 'secondary',
-            action: {
-              key: DEMO_STATUS_ACTIONS.IDENTIFY_LIGHT,
-              params: { device: light.deviceExternalId(gladys) },
-            },
-          },
-        ],
-      };
-    },
-
-    // Resolve an optional toast (string or multi-language object, ≤ 200
-    // characters). After a successful action the core drops the cached
-    // content and every open dashboard refetches it: no nudge needed.
-    async action(gladys, { actionKey, params, config }) {
-      logger.info(`onWidgetAction <- ${DEMO_STATUS_WIDGET}.${actionKey}`);
-      if (actionKey === DEMO_STATUS_ACTIONS.IDENTIFY_LIGHT) {
-        return identifyDevice(gladys, params.device, config);
-      }
-      // Throwing acks the action as failed: the message reaches the user.
-      throw new Error(`Unknown widget action: ${actionKey}`);
-    },
-  },
+  [WIDGET_KEY]: { get, action },
 };
-
-/**
- * Freshness nudge: ask the core to re-pull every widget NOW instead of
- * waiting for the content TTL. Call it when you KNOW a computed content
- * changed (here: the config, which drives the plug transport and the observed
- * location) — and after every (re)connection, since the nudges are
- * fire-and-forget: rate-limited core-side to 1 per 10 s per widget, dropped
- * silently while disconnected.
- */
-export function refreshWidgets(gladys) {
-  for (const key of Object.keys(WIDGETS)) {
-    gladys.requestWidgetRefresh(key);
-  }
-}

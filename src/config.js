@@ -1,45 +1,84 @@
 // -----------------------------------------------------------------------------
-// Integration configuration.
-//
-// The configuration is filled in by the user in Gladys, from the `config_schema`
-// declared in `gladys-assistant-integration.json`. The SDK fetches it for you
-// (`gladys.getConfig()`) and notifies you of every change through
-// `gladys.onConfigUpdated()`.
-//
-// This module only provides defaults and normalizes the received object, so the
-// rest of the code never has to deal with `undefined`.
+// Integration configuration: defaults (they mirror the `default` values of the
+// manifest `config_schema`, see test/manifest.test.js) and normalization, so
+// the rest of the code never deals with strings, blanks or `undefined`.
 // -----------------------------------------------------------------------------
 
-// Defaults: they MUST stay consistent with the `default` values declared in the
-// `config_schema` of the manifest.
+export const LANGUAGES = ['en', 'fr', 'de', 'es'];
+
+// Reading intervals offered in the configuration, in seconds. Crafty records
+// the statistics of its servers every 30 s by default: reading more often
+// shows nothing new.
+export const POLL_INTERVALS = ['30', '60', '120', '300'];
+
+export const DEFAULT_PORT = 8443;
+
 export const DEFAULT_CONFIG = {
-  latitude: 48.8566, // Paris
-  longitude: 2.3522,
-  unit: 'celsius', // 'celsius' | 'fahrenheit'
-  // Seconds between two reads of the polled sensors. Gladys polls at most once
-  // a minute: slower intervals are applied by skipping polls (see
-  // createPoller in src/devices/index.js).
-  poll_frequency: 300,
-  // Reserved key (NOT in config_schema): because the manifest declares both
-  // 'local' and 'cloud' in its `transports` field, Gladys shows a standard
-  // "Prefer the local connection" toggle and sends the user's choice here.
-  // Read-only for the integration; defaults to true.
-  GLADYS_PREFER_LOCAL: true,
+  url: '',
+  api_token: '',
+  allow_self_signed: true,
+  allow_stop: false,
+  poll_interval: '30',
+  language: 'fr',
 };
 
 /**
- * Merge the user config with the defaults.
- * @param {Record<string, unknown>} raw config returned by the SDK
+ * The address typed by the user, as a base URL; null when not understood.
+ * A bare host gets https:// and the port of Crafty (8443).
+ */
+export function parseUrl(typed) {
+  const value = typeof typed === 'string' ? typed.trim() : '';
+  if (!value) {
+    return null;
+  }
+  const withScheme = /^[a-z][a-z0-9+.-]*:\/\//iu.test(value) ? value : `https://${value}`;
+  let url;
+  try {
+    url = new URL(withScheme);
+  } catch {
+    return null;
+  }
+  if (!['http:', 'https:'].includes(url.protocol) || !url.hostname) {
+    return null;
+  }
+  if (url.username || url.password) {
+    return null; // credentials belong in the token field, never in an address
+  }
+  if (!url.port && !/^[a-z][a-z0-9+.-]*:\/\//iu.test(value)) {
+    url.port = String(DEFAULT_PORT);
+  }
+  // The API lives at /api/v2 of the panel: a path typed by habit is dropped.
+  return `${url.protocol}//${url.host}`;
+}
+
+const bool = (value, fallback) => {
+  if (value === true || value === 'true') {
+    return true;
+  }
+  if (value === false || value === 'false') {
+    return false;
+  }
+  return fallback;
+};
+
+/**
+ * @param {Record<string, unknown>} raw the configuration returned by the SDK
  */
 export function normalizeConfig(raw = {}) {
+  const source = raw && typeof raw === 'object' ? raw : {};
+  const typedUrl = typeof source.url === 'string' ? source.url.trim() : '';
+  const url = parseUrl(typedUrl);
+  // A token is kept as typed, without its surrounding blanks (a copy-paste).
+  const token = typeof source.api_token === 'string' ? source.api_token.trim() : '';
+  const interval = String(source.poll_interval ?? '');
   return {
-    ...DEFAULT_CONFIG,
-    ...raw,
-    // Force the types: config may arrive as strings from a form.
-    latitude: Number(raw.latitude ?? DEFAULT_CONFIG.latitude),
-    longitude: Number(raw.longitude ?? DEFAULT_CONFIG.longitude),
-    poll_frequency: Number(raw.poll_frequency ?? DEFAULT_CONFIG.poll_frequency),
-    // The preference is a boolean; anything but an explicit false means true.
-    GLADYS_PREFER_LOCAL: raw.GLADYS_PREFER_LOCAL !== false,
+    url,
+    urlInvalid: typedUrl !== '' && url === null,
+    token,
+    insecure: bool(source.allow_self_signed, DEFAULT_CONFIG.allow_self_signed),
+    allowStop: bool(source.allow_stop, DEFAULT_CONFIG.allow_stop),
+    pollIntervalMs:
+      Number(POLL_INTERVALS.includes(interval) ? interval : DEFAULT_CONFIG.poll_interval) * 1000,
+    language: LANGUAGES.includes(source.language) ? source.language : DEFAULT_CONFIG.language,
   };
 }
